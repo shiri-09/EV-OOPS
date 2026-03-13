@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description"
+    content="EV OOPS — A research-grade Battery Longevity Intelligence Engine combining physics-based degradation modeling, hybrid ML correction, economic analysis, and carbon impact assessment for EV batteries." />
+  <title>EV OOPS — Battery Longevity Intelligence Engine</title>
+  <link rel="icon" type="image/svg+xml"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+
+<body>
+
+  <!-- ═══ 3D BACKGROUND CANVAS ═══ -->
+  <canvas id="bg-canvas"></canvas>
+
+  <!-- ═══ CUSTOM EV CURSOR ═══ -->
+  <div id="ev-cursor" class="ev-cursor">
+    <img src="/car-cursor.svg" alt="" draggable="false" />
+  </div>
+  <div id="ev-cursor-trail" class="ev-cursor-trail"></div>
+
+  <!-- ═══ SCROLL PROGRESS BAR ═══ -->
+  <div id="scroll-progress"></div>
+
+  <!-- ═══ LOADING OVERLAY ═══ -->
+  <div id="loading-overlay">
+    <div class="loader-content">
+      <div class="loader-icon">⚡</div>
+      <h2>EV OOPS</h2>
+      <p>Initializing Battery Longevity Intelligence Engine...</p>
+      <div class="loader-bar">
+        <div class="loader-bar-fill"></div>
+      </div>
+      <p class="loader-detail" id="loader-status">Loading physics engine...</p>
+    </div>
+  </div>
+
+  <!-- ═══ FLOATING NAVIGATION ═══ -->
+  <nav id="floating-nav">
+    <a class="nav-link active" href="#" data-section="sec-hero">🏠 Home</a>
+    <a class="nav-link" href="#" data-section="sec-dashboard">📊 Dashboard</a>
+    <a class="nav-link" href="#" data-section="sec-charging">⚡ Charging</a>
+    <a class="nav-link" href="#" data-section="sec-lifespan">⏱️ Lifespan</a>
+    <a class="nav-link" href="#" data-section="sec-compare">⚖️ Compare</a>
+    <a class="nav-link" href="#" data-section="sec-sensitivity">📈 Sensitivity</a>
+    <a class="nav-link" href="#" data-section="sec-live-monitor">🔋 Live Monitor</a>
+
+  </nav>
+
+  <!-- ════════════════════════════════════════════════════════ -->
+  <!--  HERO SECTION                                           -->
+  <!-- ════════════════════════════════════════════════════════ -->
+  <section class="hero-section scroll-section" id="sec-hero">
+    <h1 class="hero-title">EV OOPS</h1>
+    <p class="hero-subtitle">Battery Longevity Intelligence Engine — a next-generation physics-driven platform for EV
+      battery lifespan prediction and decision support.</p>
+    <p class="hero-tagline">PHYSICS-DRIVEN DEGRADATION · LIFESPAN FORECASTING · REAL-TIME ANALYSIS</p>
+    <button class="hero-cta" onclick="document.getElementById('sec-dashboard').scrollIntoView({behavior:'smooth'})">
+      ⚡ Explore Dashboard
+    </button>
+    <div class="scroll-indicator">↓</div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════ -->
+  <!--  DASHBOARD SECTION                                      -->
+  <!-- ════════════════════════════════════════════════════════ -->
+  <section class="scroll-section" id="sec-dashboard">
+    <div class="section-header">
+      <h2>Real-Time Degradation Dashboard</h2>
+      <p>Physics-driven battery health intelligence with live parameter exploration</p>
+      <div class="section-divider"></div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="kpi-grid" id="kpi-grid">
+      <div class="kpi-card kpi-soh" id="kpi-soh">
+        <div class="kpi-label">State of Health</div>
+        <div class="kpi-value" id="kpi-soh-value">100%</div>
+        <div class="kpi-sub" id="kpi-soh-status">Excellent</div>
+      </div>
+      <div class="kpi-card kpi-lifespan">
+        <div class="kpi-label">Est. Lifespan</div>
+        <div class="kpi-value" id="kpi-lifespan-value">—</div>
+        <div class="kpi-sub">years to 80% SOH</div>
+      </div>
+      <div class="kpi-card kpi-daf">
+        <div class="kpi-label">Degradation Factor</div>
+        <div class="kpi-value" id="kpi-daf-value">1.0×</div>
+        <div class="kpi-sub" id="kpi-daf-status">Baseline</div>
+      </div>
+      <div class="kpi-card kpi-risk">
+        <div class="kpi-label">Risk Index</div>
+        <div class="kpi-value" id="kpi-risk-value">LOW</div>
+        <div class="kpi-sub" id="kpi-risk-desc">Normal operation</div>
+      </div>
+      <div class="kpi-card kpi-cost">
+        <div class="kpi-label">Economic Loss</div>
+        <div class="kpi-value" id="kpi-cost-value">$0</div>
+        <div class="kpi-sub">at current degradation</div>
+      </div>
+      <div class="kpi-card kpi-co2">
+        <div class="kpi-label">CO₂ Impact</div>
+        <div class="kpi-value" id="kpi-co2-value">0 kg</div>
+        <div class="kpi-sub">excess emissions</div>
+      </div>
+    </div>
+
+    <!-- Controls + Charts -->
+    <div class="dashboard-grid">
+      <div class="controls-panel glass-card">
+        <h3>⚙️ Operating Parameters</h3>
+        <div class="control-group">
+          <label for="slider-temp">🌡️ Temperature</label>
+          <div class="slider-row">
+            <input type="range" id="slider-temp" min="-10" max="50" value="25" step="1" />
+            <span class="slider-value" id="val-temp">25°C</span>
+          </div>
+        </div>
+        <div class="control-group">
+          <label for="slider-crate">⚡ C-Rate (Charging Speed)</label>
+          <div class="slider-row">
+            <input type="range" id="slider-crate" min="0.2" max="3.0" value="1.0" step="0.1" />
+            <span class="slider-value" id="val-crate">1.0C</span>
+          </div>
+        </div>
+        <div class="control-group">
+          <label for="slider-dod">🔋 Depth of Discharge</label>
+          <div class="slider-row">
+            <input type="range" id="slider-dod" min="0.1" max="0.95" value="0.8" step="0.05" />
+            <span class="slider-value" id="val-dod">80%</span>
+          </div>
+        </div>
+        <div class="control-group">
+          <label for="slider-cycles">🔄 Daily Cycles</label>
+          <div class="slider-row">
+            <input type="range" id="slider-cycles" min="0.2" max="3.0" value="1.0" step="0.1" />
+            <span class="slider-value" id="val-cycles">1.0/day</span>
+          </div>
+        </div>
+        <div class="control-group">
+          <label for="slider-years">📅 Simulation Period</label>
+          <div class="slider-row">
+            <input type="range" id="slider-years" min="1" max="20" value="10" step="1" />
+            <span class="slider-value" id="val-years">10 years</span>
+          </div>
+        </div>
+        <div class="control-group">
+          <label for="select-chemistry">🧪 Chemistry</label>
+          <select id="select-chemistry" class="styled-select">
+            <option value="NMC">NMC (Nickel Manganese Cobalt)</option>
+            <option value="LFP">LFP (Lithium Iron Phosphate)</option>
+            <option value="NCA">NCA (Nickel Cobalt Aluminium)</option>
+            <option value="LTO">LTO (Lithium Titanate)</option>
+            <option value="LMO">LMO (Lithium Manganese Oxide)</option>
+            <option value="Na-Ion">Na-Ion (Sodium-Ion)</option>
+          </select>
+        </div>
+        <div class="recommendations-box" id="recommendations-box">
+          <h4>💡 Recommendations</h4>
+          <ul id="recommendations-list"></ul>
+        </div>
+      </div>
+
+      <div class="charts-panel">
+        <div class="chart-container glass-card">
+          <h3>SOH Trajectory & Degradation Components</h3>
+          <div id="chart-soh-main" class="plotly-chart"></div>
+        </div>
+        <div class="chart-row">
+          <div class="chart-container glass-card half">
+            <h3>Degradation Breakdown</h3>
+            <div id="chart-breakdown" class="plotly-chart"></div>
+          </div>
+          <div class="chart-container glass-card half">
+            <h3>Economic Loss Over Time</h3>
+            <div id="chart-economic" class="plotly-chart"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scenarios -->
+    <div class="section-header" style="margin-top:3rem;">
+      <h2>Scenario Comparison</h2>
+      <p>How does battery lifespan vary across different usage patterns?</p>
+      <div class="section-divider"></div>
+    </div>
+    <div class="scenario-grid" id="scenario-grid"></div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════ -->
+  <!--  EV CHARGING STATIONS SECTION                           -->
+  <!-- ════════════════════════════════════════════════════════ -->
+  <section class="scroll-section" id="sec-charging">
+    <div class="section-header">
+      <h2>Nearby EV Charging Stations</h2>
+      <p>Find the closest charging points with real-time availability</p>
+      <div class="section-divider"></div>
+    </div>
+
+    <div class="charging-controls glass-card">
+      <div class="charging-controls-row">
+        <div class="charging-location" id="charging-location">
+          <span class="location-icon">📍</span>
+          <span class="location-text">Click below to detect your location</span>
+        </div>
+        <button class="primary-btn" id="btn-find-stations">⚡ Find Nearby Stations</button>
+      </div>
+      <div class="charging-status" id="charging-status"></div>
+    </div>
+
+    <div class="stations-grid" id="stations-grid"></div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════ -->
+  <!--  LIFESPAN FORECAST SECTION                              -->
+  <!-- ════════════════════════════════════════════════════════ -->
+  <section class="scroll-section" id="sec-lifespan">
+    <div class="section-header">
+      <h2>Lifespan Forecast Module</h2>
+      <p>Solve the degradation equation system to predict exact battery end-of-life</p>
+      <div class="section-divider"></div>
+    </div>
+    <div class="lifespan-layout">
+      <div class="lifespan-inputs glass-card">
+        <h3>📋 Input Parameters</h3>
+        <div class="control-group">
+          <label for="ls-temp">Average Temperature (°C)</label>
+          <input type="number" id="ls-temp" value="25" min="-10" max="50" class="number-input" />
+        </div>
+        <div class="control-group">
+          <label for="ls-crate">Fast Charging C-Rate</label>
+          <input type="number" id="ls-crate" value="1.0" min="0.1" max="3.0" step="0.1" class="number-input" />
+        </div>
+        <div class="control-group">
+          <label for="ls-fastpct">Fast Charging % of Total</label>
+          <input type="number" id="ls-fastpct" value="20" min="0" max="100" class="number-input" />
+        </div>
+        <div class="control-group">
+          <label for="ls-dod">Average Depth of Discharge (%)</label>
+          <input type="number" id="ls-dod" value="80" min="10" max="95" class="number-input" />
+        </div>
+        <div class="control-group">
+          <label for="ls-cycles">Daily Charge Cycles</label>
+          <input type="number" id="ls-cycles" value="1.0" min="0.1" max="3.0" step="0.1" class="number-input" />
+        </div>
+        <div class="control-group">
+          <label for="ls-chemistry">Battery Chemistry</label>
+          <select id="ls-chemistry" class="styled-select">
+            <option value="NMC">NMC</option>
+            <option value="LFP">LFP</option>
+            <option value="NCA">NCA</option>
+            <option value="LTO">LTO</option>
+            <option value="LMO">LMO</option>
+            <option value="Na-Ion">Na-Ion</option>
+          </select>
+        </div>
+        <button class="primary-btn" id="btn-forecast">🔮 Compute Forecast</button>
+      </div>
+      <div class="lifespan-results">
+        <div class="lifespan-hero glass-card" id="lifespan-hero">
+          <div class="hero-stat">
+            <span class="hero-label">Estimated Battery Lifespan</span>
+            <span class="hero-value" id="ls-result-years">—</span>
+            <span class="hero-unit">years</span>
+          </div>
+          <div class="hero-stat">
+            <span class="hero-label">Year reaching 80% SOH</span>
+            <span class="hero-value" id="ls-result-year">—</span>
+          </div>
+          <div class="hero-stat">
+            <span class="hero-label">Degradation Acceleration</span>
+            <span class="hero-value" id="ls-result-daf">—</span>
+          </div>
+          <div class="hero-stat">
+            <span class="hero-label">Risk Index</span>
+            <span class="hero-value" id="ls-result-risk">—</span>
+          </div>
+        </div>
+        <div class="glass-card">
+          <h3>SOH Milestones</h3>
+          <table class="data-table" id="ls-milestones-table">
+            <thead>
+              <tr>
+                <th>Year</th>
+                <th>SOH (%)</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="ls-milestones-body"></tbody>
+          </table>
+        </div>
+        <div class="glass-card">
+          <h3>📝 Recommended Adjustments</h3>
+          <ul id="ls-recommendations" class="rec-list"></ul>
+        </div>
+        <div class="chart-container glass-card">
+          <h3>SOH Forecast Curve</h3>
+          <div id="chart-lifespan" class="plotly-chart"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════ -->
+  <!--  COMPARE SECTION                                        -->
+  <!-- ════════════════════════════════════════════════════════ -->
+  <section class="scroll-section" id="sec-compare">
+    <div class="section-header">
+      <h2>Comparative Battery Intelligence</h2>
+      <p>Head-to-head chemistry comparison under identical conditions</p>
+      <div class="section-divider"></div>
+    </div>
+    <div class="compare-controls glass-card">
+      <div class="compare-selectors">
+        <div class="compare-selector">
+          <h4 style="color: var(--nmc-color);">Battery A</h4>
+          <select id="cmp-chem-a" class="styled-select">
+            <option value="NMC" selected>NMC</option>
+            <option value="LFP">LFP</option>
+            <option value="NCA">NCA</option>
+            <option value="LTO">LTO</option>
+            <option value="LMO">LMO</option>
+            <option value="Na-Ion">Na-Ion</option>
+          </select>
+        </div>
+        <div class="compare-vs">VS</div>
+        <div class="compare-selector">
+          <h4 style="color: var(--lfp-color);">Battery B</h4>
+          <select id="cmp-chem-b" class="styled-select">
+            <option value="NMC">NMC</option>
+            <option value="LFP" selected>LFP</option>
+            <option value="NCA">NCA</option>
+            <option value="LTO">LTO</option>
+            <option value="LMO">LMO</option>
+            <option value="Na-Ion">Na-Ion</option>
+          </select>
+        </div>
+      </div>
+      <button class="primary-btn" id="btn-compare" style="max-width:300px;">⚖️ Run Comparison</button>
+    </div>
+    <div class="compare-results" id="compare-results">
+      <div class="compare-winner glass-card" id="cmp-winner"></div>
+      <div class="chart-container glass-card">
+        <h3>SOH Comparison</h3>
+        <div id="chart-compare-soh" class="plotly-chart"></div>
+      </div>
+      <div class="chart-row">
+        <div class="chart-container glass-card half">
+          <h3>Climate Sensitivity</h3>
+          <div id="chart-compare-climate" class="plotly-chart"></div>
+        </div>
+        <div class="chart-container glass-card half">
+          <h3>C-Rate Sensitivity</h3>
+          <div id="chart-compare-crate" class="plotly-chart"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════ -->
+  <!--  SENSITIVITY SECTION                                    -->
+  <!-- ════════════════════════════════════════════════════════ -->
+  <section class="scroll-section" id="sec-sensitivity">
+    <div class="section-header">
+      <h2>Sensitivity Analysis</h2>
+      <p>Quantify how each parameter influences battery degradation and lifespan</p>
+      <div class="section-divider"></div>
+    </div>
+    <div class="sensitivity-layout">
+      <div class="chart-container glass-card">
+        <h3>🌪️ Tornado Diagram — Parameter Impact on Lifespan</h3>
+        <div id="chart-tornado" class="plotly-chart"></div>
+      </div>
+      <div class="chart-row">
+        <div class="chart-container glass-card half">
+          <h3>🌡️ Temperature vs Lifespan</h3>
+          <div id="chart-sweep-temp" class="plotly-chart"></div>
+        </div>
+        <div class="chart-container glass-card half">
+          <h3>⚡ C-Rate vs Lifespan</h3>
+          <div id="chart-sweep-crate" class="plotly-chart"></div>
+        </div>
+      </div>
+      <div class="chart-row">
+        <div class="chart-container glass-card half">
+          <h3>🔋 Depth of Discharge vs Lifespan</h3>
+          <div id="chart-sweep-dod" class="plotly-chart"></div>
+        </div>
+        <div class="chart-container glass-card half">
+          <h3>🔄 Daily Cycles vs Lifespan</h3>
+          <div id="chart-sweep-cycles" class="plotly-chart"></div>
+        </div>
+      </div>
+      <div class="glass-card">
+        <h3>📊 Elasticity Rankings</h3>
+        <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:0.75rem;">Normalized sensitivity: how a 1%
+          change in each parameter affects degradation</p>
+        <table class="data-table" id="elasticity-table">
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Parameter</th>
+              <th>Elasticity</th>
+              <th>Interpretation</th>
+            </tr>
+          </thead>
+          <tbody id="elasticity-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════ -->
+  <!--  LIVE BATTERY MONITOR                                    -->
+  <!-- ════════════════════════════════════════════════════════ -->
+  <section class="scroll-section" id="sec-live-monitor">
+    <div class="section-header">
+      <h2>🔋 Live Battery Monitor</h2>
+      <p>Real-time battery condition powered by Raspberry Pi 5 sensors</p>
+      <div class="section-divider"></div>
+    </div>
+
+    <!-- Connection Status -->
+    <div class="monitor-connection glass-card" id="monitor-connection">
+      <div class="conn-indicator" id="conn-indicator"></div>
+      <span class="conn-text" id="conn-text">Initializing...</span>
+      <select id="monitor-chemistry" class="styled-select" style="max-width:200px;margin-left:auto;">
+        <option value="NMC">NMC</option>
+        <option value="LFP">LFP</option>
+        <option value="NCA">NCA</option>
+        <option value="LTO">LTO</option>
+        <option value="LMO">LMO</option>
+        <option value="Na-Ion">Na-Ion</option>
+      </select>
+    </div>
+
+    <!-- Live KPIs -->
+    <div class="monitor-kpis">
+      <div class="monitor-kpi glass-card">
+        <div class="kpi-icon">🌡️</div>
+        <div class="kpi-value" id="live-temp">--</div>
+        <div class="kpi-label">Temperature</div>
+        <div class="kpi-sub" id="live-temp-status">Waiting...</div>
+      </div>
+      <div class="monitor-kpi glass-card">
+        <div class="kpi-icon">📊</div>
+        <div class="kpi-value" id="live-soh">--</div>
+        <div class="kpi-label">State of Health</div>
+        <div class="kpi-sub" id="live-soh-status">Waiting...</div>
+      </div>
+      <div class="monitor-kpi glass-card">
+        <div class="kpi-icon">⏳</div>
+        <div class="kpi-value" id="live-lifetime">--</div>
+        <div class="kpi-label">Est. Battery Life</div>
+        <div class="kpi-sub" id="live-lifetime-sub">Waiting...</div>
+      </div>
+      <div class="monitor-kpi glass-card">
+        <div class="kpi-icon">⚡</div>
+        <div class="kpi-value" id="live-voltage">--</div>
+        <div class="kpi-label">Voltage</div>
+        <div class="kpi-sub" id="live-soc-sub">Waiting...</div>
+      </div>
+    </div>
+
+    <!-- Temperature Operating Range -->
+    <div class="monitor-row">
+      <div class="chart-container glass-card" style="flex:2;">
+        <h3>🌡️ Temperature Operating Range — Performance at Different Temperatures</h3>
+        <div id="chart-temp-range" class="plotly-chart"></div>
+      </div>
+      <div class="monitor-recommendations glass-card" style="flex:1;">
+        <h3>💡 Live Recommendations</h3>
+        <ul id="live-recommendations"></ul>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══ FOOTER ═══ -->
+  <footer id="app-footer">
+    <p>EV OOPS — A Computational Electrochemical Intelligence System</p>
+    <p class="footer-sub">All predictions derived from physics-based models validated against NASA PCoE datasets. Not
+      financial or engineering advice.</p>
+  </footer>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+
+</html>
