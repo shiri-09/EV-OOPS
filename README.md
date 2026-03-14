@@ -83,7 +83,8 @@ EV OOPS/
 | Layer | Technology |
 |-------|-----------|
 | **Build Tool** | Vite |
-| **3D Graphics** | Three.js (TextGeometry, particles, orbs) |
+| **3D Graphics** | Three.js (Minimal, high-performance TextGeometry background) |
+| **Interactive Maps** | Leaflet.js |
 | **Animations** | GSAP + ScrollTrigger |
 | **Smooth Scroll** | Lenis |
 | **Charts** | Plotly.js (3D surfaces, line charts) |

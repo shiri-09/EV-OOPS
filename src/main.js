@@ -6,7 +6,7 @@
  * ═══════════════════════════════════════════════════════════════
  */
 
-import Plotly from 'plotly.js-dist-min';
+// import Plotly from 'plotly.js-dist-min'; // Using CDN instead due to Vite bundle issues
 import { CHEMISTRIES } from './data/battery-chemistries.js';
 import { DAYS_PER_YEAR } from './data/constants.js';
 import { sohTimeSeries, classifySOH, computeSOH, computeSOHDetailed } from './physics/soh-calculator.js';
@@ -74,49 +74,54 @@ function getChemistry() {
 //  DASHBOARD
 // ═══════════════════════════════════════════════════════════
 function updateDashboard() {
-    const chem = getChemistry();
-    const cond = getConditions();
-    const analysis = fullLifespanAnalysis(chem, cond);
+    console.log("updateDashboard Executing!");
+    try {
+        const chem = getChemistry();
+        const cond = getConditions();
+        const analysis = fullLifespanAnalysis(chem, cond);
 
-    const currentSOH = 100 - degradationComponents(chem, cond).total;
-    const sohClamped = Math.max(currentSOH, 0).toFixed(1);
-    const sohClass = classifySOH(currentSOH);
+        const currentSOH = 100 - degradationComponents(chem, cond).total;
+        const sohClamped = Math.max(currentSOH, 0).toFixed(1);
+        const sohClass = classifySOH(currentSOH);
 
-    document.getElementById('kpi-soh-value').textContent = `${sohClamped}%`;
-    document.getElementById('kpi-soh-value').style.color = sohClass.color;
-    document.getElementById('kpi-soh-status').textContent = sohClass.status;
-    document.getElementById('kpi-soh-status').style.color = sohClass.color;
+        document.getElementById('kpi-soh-value').textContent = `${sohClamped}%`;
+        document.getElementById('kpi-soh-value').style.color = sohClass.color;
+        document.getElementById('kpi-soh-status').textContent = sohClass.status;
+        document.getElementById('kpi-soh-status').style.color = sohClass.color;
 
-    const lyStr = analysis.lifespanYears === Infinity ? '20+' : analysis.lifespanYears.toFixed(1);
-    document.getElementById('kpi-lifespan-value').textContent = lyStr;
+        const lyStr = analysis.lifespanYears === Infinity ? '20+' : analysis.lifespanYears.toFixed(1);
+        document.getElementById('kpi-lifespan-value').textContent = lyStr;
 
-    const dafStr = analysis.daf <= 0 ? '< 1.0×' : analysis.daf.toFixed(2) + '×';
-    document.getElementById('kpi-daf-value').textContent = dafStr;
-    document.getElementById('kpi-daf-status').textContent = analysis.risk.level;
-    document.getElementById('kpi-daf-status').style.color = analysis.risk.color;
+        const dafStr = analysis.daf <= 0 ? '< 1.0×' : analysis.daf.toFixed(2) + '×';
+        document.getElementById('kpi-daf-value').textContent = dafStr;
+        document.getElementById('kpi-daf-status').textContent = analysis.risk.level;
+        document.getElementById('kpi-daf-status').style.color = analysis.risk.color;
 
-    document.getElementById('kpi-risk-value').textContent = analysis.risk.level;
-    document.getElementById('kpi-risk-value').style.color = analysis.risk.color;
-    document.getElementById('kpi-risk-desc').textContent = analysis.risk.description;
+        document.getElementById('kpi-risk-value').textContent = analysis.risk.level;
+        document.getElementById('kpi-risk-value').style.color = analysis.risk.color;
+        document.getElementById('kpi-risk-desc').textContent = analysis.risk.description;
 
-    const econ = economicTimeSeries(chem, cond, 60, parseFloat(document.getElementById('slider-years').value));
-    const lastLoss = econ.loss[econ.loss.length - 1] || 0;
-    document.getElementById('kpi-cost-value').textContent = '$' + Math.round(lastLoss).toLocaleString();
+        const econ = economicTimeSeries(chem, cond, 60, parseFloat(document.getElementById('slider-years').value));
+        const lastLoss = econ.loss[econ.loss.length - 1] || 0;
+        document.getElementById('kpi-cost-value').textContent = '$' + Math.round(lastLoss).toLocaleString();
 
-    const carbon = carbonImpact(chem, cond);
-    document.getElementById('kpi-co2-value').textContent = Math.round(carbon.excessCO2) + ' kg';
+        const carbon = carbonImpact(chem, cond);
+        document.getElementById('kpi-co2-value').textContent = Math.round(carbon.excessCO2) + ' kg';
 
-    const recList = document.getElementById('recommendations-list');
-    recList.innerHTML = '';
-    analysis.recommendations.forEach(r => {
-        const li = document.createElement('li');
-        li.textContent = r;
-        recList.appendChild(li);
-    });
+        const recList = document.getElementById('recommendations-list');
+        recList.innerHTML = '';
+        analysis.recommendations.forEach(r => {
+            const li = document.createElement('li');
+            li.textContent = r;
+            recList.appendChild(li);
+        });
 
-    renderSOHChart(chem, cond);
-    renderBreakdownChart(chem, cond);
-    renderEconomicChart(chem, cond);
+        renderSOHChart(chem, cond);
+        renderBreakdownChart(chem, cond);
+        renderEconomicChart(chem, cond);
+    } catch (e) {
+        console.error("Dashboard Error:", e);
+    }
 }
 
 function renderSOHChart(chem, cond) {
@@ -488,16 +493,21 @@ function renderResearchPapers() {
 // ═══════════════════════════════════════════════════════════
 //  CHARGING STATIONS
 // ═══════════════════════════════════════════════════════════
+let chargingMap = null;
+let mapMarkers = [];
+
 async function findAndRenderStations() {
     const statusEl = document.getElementById('charging-status');
     const locationEl = document.getElementById('charging-location');
     const gridEl = document.getElementById('stations-grid');
+    const mapEl = document.getElementById('charging-map');
     const btn = document.getElementById('btn-find-stations');
 
     btn.disabled = true;
     btn.textContent = '⚡ Detecting location...';
     statusEl.innerHTML = '<span class="status-loading">⏳ Getting your location...</span>';
     gridEl.innerHTML = '';
+    if (mapEl) mapEl.style.display = 'none';
 
     try {
         const { lat, lng } = await getUserLocation();
@@ -515,6 +525,31 @@ async function findAndRenderStations() {
         }
 
         statusEl.innerHTML = `<span class="status-success">✅ Found ${stations.length} stations nearby</span>`;
+        if (mapEl) mapEl.style.display = 'block';
+
+        if (window.L) {
+            if (!chargingMap) {
+                chargingMap = L.map('charging-map').setView([lat, lng], 13);
+                L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                    attribution: '&copy; OpenStreetMap &copy; CARTO',
+                    subdomains: 'abcd',
+                    maxZoom: 20
+                }).addTo(chargingMap);
+            } else {
+                chargingMap.setView([lat, lng], 13);
+                mapMarkers.forEach(m => chargingMap.removeLayer(m));
+                mapMarkers = [];
+            }
+
+            const userMarker = L.circleMarker([lat, lng], {
+                radius: 8, fillColor: '#3b82f6', color: '#fff', weight: 2, opacity: 1, fillOpacity: 1
+            }).addTo(chargingMap);
+            userMarker.bindPopup('<b>📍 Your Location</b>');
+            mapMarkers.push(userMarker);
+
+            // Adjust map view properly when container becomes visible
+            setTimeout(() => chargingMap.invalidateSize(), 100);
+        }
 
         stations.forEach(station => {
             const occ = getOccupancyStatus(station.occupancyPct);
@@ -547,6 +582,21 @@ async function findAndRenderStations() {
                 <a href="${station.googleMapsUrl}" target="_blank" rel="noopener" class="station-directions">🗺️ Get Directions →</a>
             `;
             gridEl.appendChild(card);
+
+            if (window.L && chargingMap) {
+                const markerHtml = `<div style="background-color: ${occ.color}; width: 100%; height: 100%; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 10px ${occ.color};"></div>`;
+                const customIcon = L.divIcon({
+                    html: markerHtml, className: 'custom-station-icon', iconSize: [16, 16], iconAnchor: [8, 8], popupAnchor: [0, -8]
+                });
+                const stationMarker = L.marker([station.lat, station.lng], { icon: customIcon }).addTo(chargingMap);
+                stationMarker.bindPopup(`
+                    <h3>⚡ ${station.name}</h3>
+                    <p style="margin:4px 0">${station.distance} ${station.distanceUnit}</p>
+                    <p style="margin:4px 0;color:${occ.color}">${occ.label}</p>
+                    <a href="${station.googleMapsUrl}" target="_blank" rel="noopener" style="color:#2dd4bf;display:inline-block;margin-top:6px;font-weight:500;">🗺️ Directions</a>
+                `);
+                mapMarkers.push(stationMarker);
+            }
         });
 
     } catch (err) {
@@ -747,6 +797,8 @@ function initBatteryMonitor() {
 //  BOOT
 // ═══════════════════════════════════════════════════════════
 function boot() {
+    console.log("BOOT RUNNING");
+    console.log("Is Plotly available?", typeof Plotly);
     const statusEl = document.getElementById('loader-status');
 
     statusEl.textContent = 'Initializing 3D scene...';
@@ -773,6 +825,10 @@ function boot() {
 
         // Render sensitivity eagerly
         renderSensitivity();
+
+        // Eagerly pre-populate forecast and comparison to avoid blank charts
+        runForecast();
+        runComparison();
 
         // Init live battery monitor
         initBatteryMonitor();

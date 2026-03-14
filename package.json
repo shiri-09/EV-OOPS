@@ -16,6 +16,7 @@
     "katex": "^0.16.33",
     "lenis": "^1.3.18-dev.0",
     "plotly.js-dist-min": "^3.4.0",
+    "puppeteer": "^24.39.1",
     "three": "^0.183.2"
   }
 }

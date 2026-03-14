@@ -1,21 +1,33 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="40" height="24" viewBox="0 0 40 24">
-  <!-- EV Car body -->
-  <path d="M6 14 L8 8 L14 5 L30 5 L35 8 L37 14 Z" fill="#10B981" opacity="0.9"/>
-  <!-- Car roof / windshield -->
-  <path d="M13 5 L16 1 L28 1 L31 5 Z" fill="#0D9668"/>
-  <!-- Windshield glass -->
-  <path d="M16.5 2 L27.5 2 L30 5 L14 5 Z" fill="rgba(45,212,191,0.5)"/>
-  <!-- Car bottom -->
-  <rect x="4" y="14" width="34" height="4" rx="2" fill="#0D9668"/>
-  <!-- Lightning bolt (EV symbol) -->
-  <path d="M19 6 L17 10 L20 10 L18 14 L23 9 L20 9 L22 6 Z" fill="#FFD700" opacity="0.9"/>
-  <!-- Wheels -->
-  <circle cx="12" cy="18" r="3" fill="#1a1a2e" stroke="#2DD4BF" stroke-width="0.8"/>
-  <circle cx="12" cy="18" r="1.2" fill="#2DD4BF"/>
-  <circle cx="30" cy="18" r="3" fill="#1a1a2e" stroke="#2DD4BF" stroke-width="0.8"/>
-  <circle cx="30" cy="18" r="1.2" fill="#2DD4BF"/>
-  <!-- Headlights -->
-  <ellipse cx="37" cy="12" rx="1.5" ry="1" fill="#FFD700" opacity="0.8"/>
-  <!-- Tail light -->
-  <ellipse cx="5" cy="12" rx="1" ry="1" fill="#EF4444" opacity="0.7"/>
+  <defs>
+    <linearGradient id="bodyGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#059669"/>
+      <stop offset="100%" stop-color="#10B981"/>
+    </linearGradient>
+    <linearGradient id="glassGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2DD4BF" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#10B981" stop-opacity="0.2"/>
+    </linearGradient>
+  </defs>
+  <!-- Sleek EV Body -->
+  <path d="M 4 14 C 4 14, 5 7, 12 5 C 19 3, 26 3, 31 6 C 35 8, 38 12, 38 14 C 38 16, 37 17, 35 17 L 5 17 C 4 17, 3 15, 4 14 Z" fill="url(#bodyGrad)" />
+  <!-- Underbody -->
+  <path d="M 3 16 C 5 16, 35 16, 37 16 C 38 16, 38 18, 36 18 C 30 18, 10 18, 4 18 C 2 18, 2 16, 3 16 Z" fill="#064E3B" />
+  <!-- Glass Canopy -->
+  <path d="M 12 6 C 18 4, 25 4, 29 7 C 30 8, 30 10, 31 11 L 18 11 L 9 11 C 9 9, 10 7, 12 6 Z" fill="url(#glassGrad)" />
+  <!-- Dynamic lines -->
+  <path d="M 14 13 L 34 13" stroke="#34D399" stroke-width="0.5" />
+  <path d="M 16 15 L 32 15" stroke="#059669" stroke-width="0.5" />
+  <!-- Glowing Bolt -->
+  <path d="M 21 8 L 19 12 L 22 12 L 20 16 L 25 11 L 22 11 L 24 8 Z" fill="#FDE047" filter="drop-shadow(0 0 2px #FDE047)" />
+  <!-- Futuristic Wheels -->
+  <circle cx="10" cy="17" r="3.5" fill="#0F172A" />
+  <circle cx="10" cy="17" r="2" fill="none" stroke="#34D399" stroke-width="1.2" />
+  <circle cx="10" cy="17" r="0.5" fill="#10B981" />
+  <circle cx="30" cy="17" r="3.5" fill="#0F172A" />
+  <circle cx="30" cy="17" r="2" fill="none" stroke="#34D399" stroke-width="1.2" />
+  <circle cx="30" cy="17" r="0.5" fill="#10B981" />
+  <!-- Glow points -->
+  <ellipse cx="37" cy="13" rx="1.5" ry="1" fill="#FDE047" filter="drop-shadow(0 0 2px #FDE047)" />
+  <ellipse cx="4" cy="12" rx="1" ry="1" fill="#EF4444" filter="drop-shadow(0 0 2px #EF4444)" />
 </svg>
