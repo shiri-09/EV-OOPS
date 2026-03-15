@@ -152,6 +152,8 @@ EV OOPS references NASA Prognostics Center of Excellence (PCoE) battery datasets
 
 **Sriraksha** — [@shiri-09](https://github.com/shiri-09)
 
+Feel free to open an issue or pull request if you have any suggestions or feedback!
+
 ---
 
 ## 📄 License
