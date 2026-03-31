@@ -564,7 +564,7 @@ async function findAndRenderStations() {
                 <div class="station-operator">${station.operator}</div>
                 <div class="station-occupancy">
                     <div class="occ-header">
-                        <span class="occ-label">Occupancy</span>
+                        <span class="occ-label">Occupancy <small style="opacity:0.6;font-weight:400">(Estimated)</small></span>
                         <span class="occ-status" style="color:${occ.color};background:${occ.bgColor}">${occ.label}</span>
                     </div>
                     <div class="occ-bar">
