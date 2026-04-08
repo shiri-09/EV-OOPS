@@ -11,13 +11,14 @@
  *
  *  DATA ACCURACY NOTES:
  *  - Station locations, names, operators, connectors → REAL data from Open Charge Map
- *  - Distances → REAL, calculated using Haversine formula from your GPS location
+ *  - Distances → REAL DRIVING DISTANCES via OSRM (matches Google Maps)
  *  - Occupancy → ESTIMATED based on time-of-day patterns (no free API provides live occupancy)
  */
 
 const OCM_API = 'https://api.openchargemap.io/v3/poi';
+const OSRM_API = 'https://router.project-osrm.org/table/v1/driving';
 
-// ── Haversine formula: accurate distance between two lat/lng points ──
+// ── Haversine formula: used only as fallback when OSRM is unavailable ──
 function haversineDistanceKm(lat1, lng1, lat2, lng2) {
     const R = 6371; // Earth's radius in km
     const toRad = (deg) => (deg * Math.PI) / 180;
@@ -29,6 +30,42 @@ function haversineDistanceKm(lat1, lng1, lat2, lng2) {
         Math.sin(dLng / 2) * Math.sin(dLng / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
+}
+
+/**
+ * Fetch real driving distances from OSRM Table API.
+ * Sends user location + all station coords in one request.
+ * Returns an array of driving distances in km (one per station).
+ * Falls back to null if OSRM is unreachable.
+ */
+async function fetchDrivingDistances(userLat, userLng, stations) {
+    if (!stations.length) return null;
+
+    // Build coordinates string: user first, then all stations
+    // OSRM format: lng,lat;lng,lat;...
+    const coords = [`${userLng},${userLat}`, ...stations.map(s => `${s.lng},${s.lat}`)].join(';');
+
+    // sources=0 means calculate from the first point (user) to all others
+    const url = `${OSRM_API}/${coords}?sources=0&annotations=distance`;
+
+    try {
+        const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+        if (!res.ok) throw new Error(`OSRM ${res.status}`);
+        const data = await res.json();
+
+        if (data.code !== 'Ok' || !data.distances || !data.distances[0]) {
+            throw new Error('OSRM returned invalid data');
+        }
+
+        // distances[0] is the row from user to all destinations
+        // First value (index 0) is user-to-user (0), skip it
+        // Convert meters to km
+        const drivingDistances = data.distances[0].slice(1).map(d => d / 1000);
+        return drivingDistances;
+    } catch (err) {
+        console.warn('OSRM driving distance API failed, falling back to Haversine:', err.message);
+        return null;
+    }
 }
 
 // ── Time-based occupancy estimation ──────────────────────
@@ -147,109 +184,114 @@ export function getUserLocation() {
 /**
  * Fetch nearby charging stations from Open Charge Map.
  * Falls back to built-in station data if the API is unreachable.
- * Distances are always computed with Haversine from user's real GPS position.
+ * Distances are REAL DRIVING DISTANCES from OSRM (matches Google Maps).
+ * Falls back to Haversine straight-line only if OSRM is unreachable.
  * Occupancy is estimated from time-of-day patterns (no free live data exists).
  */
 export async function fetchNearbyStations(lat, lng, maxResults = 12, distanceKm = 25) {
     const params = `output=json&latitude=${lat}&longitude=${lng}&distance=${distanceKm}&distanceunit=KM&maxresults=${maxResults}&compact=true&verbose=false`;
 
-    // Try API first, then CORS proxy, then fall back to built-in data
-    let data;
+    // ── Step 1: Collect raw stations (API → proxy → fallback) ──
+    let rawStations = null;
+
     try {
         const response = await fetch(`${OCM_API}?${params}`);
         if (!response.ok) throw new Error(`API ${response.status}`);
-        data = await response.json();
-    } catch {
+        const data = await response.json();
+        if (Array.isArray(data) && data.length > 0) rawStations = data;
+    } catch { /* try proxy next */ }
+
+    if (!rawStations) {
         try {
             const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(`${OCM_API}?${params}`)}`;
             const response = await fetch(proxyUrl);
             if (!response.ok) throw new Error(`Proxy ${response.status}`);
-            data = await response.json();
-        } catch {
-            // ── Fallback: use built-in station data with REAL distances ──
-            console.warn('Charging station API unreachable — using built-in station data');
-            const fallbackWithDistances = FALLBACK_STATIONS
-                .map(s => {
-                    const dist = haversineDistanceKm(lat, lng, s.lat, s.lng);
-                    const occ = estimateOccupancy(s.totalChargers, s.id);
-                    return {
-                        ...s,
-                        distance: dist.toFixed(1),
-                        distanceUnit: 'km',
-                        ...occ,
-                        googleMapsUrl: `https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}`,
-                    };
-                })
-                .filter(s => parseFloat(s.distance) <= distanceKm) // Only show within range
-                .sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance)); // Nearest first
-            return fallbackWithDistances;
-        }
+            const data = await response.json();
+            if (Array.isArray(data) && data.length > 0) rawStations = data;
+        } catch { /* use fallback */ }
     }
 
-    if (!Array.isArray(data) || data.length === 0) {
-        // Same fallback with real distances
-        const fallbackWithDistances = FALLBACK_STATIONS
-            .map(s => {
-                const dist = haversineDistanceKm(lat, lng, s.lat, s.lng);
-                const occ = estimateOccupancy(s.totalChargers, s.id);
-                return {
-                    ...s,
-                    distance: dist.toFixed(1),
-                    distanceUnit: 'km',
-                    ...occ,
-                    googleMapsUrl: `https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}`,
-                };
-            })
-            .filter(s => parseFloat(s.distance) <= distanceKm)
-            .sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
-        return fallbackWithDistances;
+    // ── Step 2: Normalize into a common format ──
+    let stations;
+
+    if (rawStations) {
+        // Parse API data
+        stations = rawStations.map(station => {
+            const addr = station.AddressInfo || {};
+            const connections = station.Connections || [];
+            const numPoints = station.NumberOfPoints || connections.length || 1;
+            const occ = estimateOccupancy(numPoints, station.ID);
+
+            // Haversine as initial estimate (will be replaced by OSRM)
+            const hvDist = (addr.Latitude && addr.Longitude)
+                ? haversineDistanceKm(lat, lng, addr.Latitude, addr.Longitude)
+                : 999;
+
+            return {
+                id: station.ID,
+                name: addr.Title || 'Unknown Station',
+                address: [addr.AddressLine1, addr.Town, addr.StateOrProvince].filter(Boolean).join(', '),
+                distance: hvDist.toFixed(1),
+                distanceUnit: 'km',
+                lat: addr.Latitude,
+                lng: addr.Longitude,
+                totalChargers: numPoints,
+                occupied: occ.occupied,
+                available: occ.available,
+                occupancyPct: occ.occupancyPct,
+                connectorTypes: [...new Set(connections.map(c => {
+                    const t = c.ConnectionType;
+                    if (!t) return 'Unknown';
+                    if (t.Title) return t.Title;
+                    const map = { 1: 'Type 1 (J1772)', 2: 'CHAdeMO', 25: 'Type 2', 27: 'Tesla', 32: 'CCS', 33: 'CCS2' };
+                    return map[t.ID] || `Type ${t.ID}`;
+                }))],
+                powerKw: connections.reduce((max, c) => Math.max(max, c.PowerKW || 0), 0),
+                status: station.StatusType ? station.StatusType.Title : 'Unknown',
+                operator: station.OperatorInfo ? (station.OperatorInfo.Title || 'Independent') : 'Independent',
+                googleMapsUrl: `https://www.google.com/maps/dir/?api=1&destination=${addr.Latitude},${addr.Longitude}`,
+            };
+        });
+    } else {
+        // Fallback to built-in stations
+        console.warn('Charging station API unreachable — using built-in station data');
+        stations = FALLBACK_STATIONS.map(s => {
+            const hvDist = haversineDistanceKm(lat, lng, s.lat, s.lng);
+            const occ = estimateOccupancy(s.totalChargers, s.id);
+            return {
+                ...s,
+                distance: hvDist.toFixed(1),
+                distanceUnit: 'km',
+                ...occ,
+                googleMapsUrl: `https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}`,
+            };
+        });
     }
 
-    // ── Parse API data with REAL distances and estimated occupancy ──
-    return data.map(station => {
-        const addr = station.AddressInfo || {};
-        const connections = station.Connections || [];
-        const numPoints = station.NumberOfPoints || connections.length || 1;
+    // Filter to only stations within range and with valid coordinates
+    stations = stations.filter(s =>
+        s.lat && s.lng && parseFloat(s.distance) <= distanceKm
+    );
 
-        // Real distance: use API distance if available, else compute with Haversine
-        let dist;
-        if (addr.Distance != null && addr.Distance > 0) {
-            dist = addr.Distance.toFixed(1);
-        } else if (addr.Latitude && addr.Longitude) {
-            dist = haversineDistanceKm(lat, lng, addr.Latitude, addr.Longitude).toFixed(1);
-        } else {
-            dist = '?';
-        }
+    // ── Step 3: Fetch REAL driving distances from OSRM ──
+    const drivingDistances = await fetchDrivingDistances(lat, lng, stations);
 
-        // Estimated occupancy based on time-of-day
-        const occ = estimateOccupancy(numPoints, station.ID);
+    if (drivingDistances) {
+        // Apply real driving distances
+        stations.forEach((s, i) => {
+            if (drivingDistances[i] != null && drivingDistances[i] > 0) {
+                s.distance = drivingDistances[i].toFixed(1);
+            }
+        });
+        console.log('✅ Using real driving distances from OSRM (matches Google Maps)');
+    } else {
+        console.warn('⚠️ OSRM unavailable — showing straight-line distances (may differ from Google Maps)');
+    }
 
-        return {
-            id: station.ID,
-            name: addr.Title || 'Unknown Station',
-            address: [addr.AddressLine1, addr.Town, addr.StateOrProvince].filter(Boolean).join(', '),
-            distance: dist,
-            distanceUnit: 'km',
-            lat: addr.Latitude,
-            lng: addr.Longitude,
-            totalChargers: numPoints,
-            occupied: occ.occupied,
-            available: occ.available,
-            occupancyPct: occ.occupancyPct,
-            connectorTypes: [...new Set(connections.map(c => {
-                const t = c.ConnectionType;
-                if (!t) return 'Unknown';
-                if (t.Title) return t.Title;
-                const map = { 1: 'Type 1 (J1772)', 2: 'CHAdeMO', 25: 'Type 2', 27: 'Tesla', 32: 'CCS', 33: 'CCS2' };
-                return map[t.ID] || `Type ${t.ID}`;
-            }))],
-            powerKw: connections.reduce((max, c) => Math.max(max, c.PowerKW || 0), 0),
-            status: station.StatusType ? station.StatusType.Title : 'Unknown',
-            operator: station.OperatorInfo ? (station.OperatorInfo.Title || 'Independent') : 'Independent',
-            googleMapsUrl: `https://www.google.com/maps/dir/?api=1&destination=${addr.Latitude},${addr.Longitude}`,
-        };
-    })
-    .sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance)); // Nearest first
+    // Sort by distance (nearest first)
+    stations.sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
+
+    return stations;
 }
 
 /**
